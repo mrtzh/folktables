@@ -9,7 +9,7 @@ from .load_acs import load_acs, load_definitions
 class ACSDataSource(folktables.DataSource):
     """Data source implementation for ACS PUMS data."""
 
-    def __init__(self, survey_year, horizon, survey, root_dir="data"):
+    def __init__(self, survey_year, horizon, survey, root_dir="data", use_archive=False):
         """Create data source around PUMS data for specific year, time horizon, survey type.
 
         Args:
@@ -26,7 +26,8 @@ class ACSDataSource(folktables.DataSource):
         self._horizon = horizon
         self._survey = survey
         self._root_dir = root_dir
-
+        self._use_archive = use_archive
+ 
     def get_data(self, states=None, density=1.0, random_seed=0, join_household=False, download=False):
         """Get data from given list of states, density, and random seed. Optionally add household features."""
         data = load_acs(root_dir=self._root_dir,
@@ -36,7 +37,8 @@ class ACSDataSource(folktables.DataSource):
                         survey=self._survey,
                         density=density,
                         random_seed=random_seed,
-                        download=download)
+                        download=download, 
+                        use_archive=self._use_archive)
         if join_household:
             orig_len = len(data)
             assert self._survey == 'person'
@@ -46,7 +48,9 @@ class ACSDataSource(folktables.DataSource):
                                       horizon=self._horizon,
                                       survey='household',
                                       serial_filter_list=list(data['SERIALNO']),
-                                      download=download)
+                                      download=download,
+                                      use_archive=self._use_archive
+                                    )
 
             # We only want to keep the columns in the household dataframe that don't appear in the person
             # dataframe, but we *do* want to include the SERIALNO column to merge on.
@@ -63,7 +67,7 @@ class ACSDataSource(folktables.DataSource):
         Only works for year>=2017 as previous years don't include .csv definition files.
         """
         return load_definitions(root_dir=self._root_dir, year=self._survey_year, horizon=self._horizon,
-                                download=download)
+                                download=download, use_archive=self._use_archive)
 
 
 def adult_filter(data):
