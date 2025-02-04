@@ -9,6 +9,9 @@ import numpy as np
 import pandas as pd
 
 
+# seems to be the latest archive of the pums website
+_archive_url="https://web.archive.org/web/20241006065243/" 
+
 state_list = ['AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI',
               'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI',
               'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC',
@@ -43,7 +46,7 @@ def download_and_extract(url, datadir, remote_fname, file_name, delete_download=
         os.remove(download_path)
 
 
-def initialize_and_download(datadir, state, year, horizon, survey, download=False):
+def initialize_and_download(datadir, state, year, horizon, survey, download=False, use_archive=False):
     """Download the dataset (if required)."""
     assert horizon in ['1-Year', '5-Year']
     assert int(year) >= 2014
@@ -69,6 +72,9 @@ def initialize_and_download(datadir, state, year, horizon, survey, download=Fals
     print(f'Downloading data for {year} {horizon} {survey} survey for {state}...')
     # Download and extract file
     base_url= f'https://www2.census.gov/programs-surveys/acs/data/pums/{year}/{horizon}'
+    if use_archive:
+        base_url = f"{_archive_url}{base_url}"    
+
     remote_fname = f'csv_{survey_code}{state.lower()}.zip'
     url = f'{base_url}/{remote_fname}'
     try:
@@ -83,7 +89,7 @@ def initialize_and_download(datadir, state, year, horizon, survey, download=Fals
 def load_acs(root_dir, states=None, year=2018, horizon='1-Year',
              survey='person', density=1, random_seed=1,
              serial_filter_list=None,
-             download=False):
+             download=False, use_archive=False):
     """
     Load sample of ACS PUMS data from Census csv files into DataFrame.
 
@@ -108,7 +114,7 @@ def load_acs(root_dir, states=None, year=2018, horizon='1-Year',
     file_names = []
     for state in states:
         file_names.append(
-            initialize_and_download(base_datadir, state, year, horizon, survey, download=download)
+            initialize_and_download(base_datadir, state, year, horizon, survey, download=download, use_archive=use_archive)
         )
 
     dtypes = {'PINCP': np.float64, 'RT': str, 'SOCP': str, 'SERIALNO': str, 'NAICSP': str}
@@ -127,7 +133,7 @@ def load_acs(root_dir, states=None, year=2018, horizon='1-Year',
     return all_df
 
 
-def load_definitions(root_dir, year=2018, horizon='1-Year', download=False):
+def load_definitions(root_dir, year=2018, horizon='1-Year', download=False, use_archive=False):
     """
     Loads the data attribute definition file.
 
@@ -148,6 +154,9 @@ def load_definitions(root_dir, year=2018, horizon='1-Year', download=False):
     print('Downloading the attribute definition file...')
     year_string = year if horizon == '1-Year' else f'{year - 4}-{year}'
     url = f'https://www2.census.gov/programs-surveys/acs/tech_docs/pums/data_dict/PUMS_Data_Dictionary_{year_string}.csv'
+    
+    if use_archive:
+        url=f"{_archive_url}{url}"
 
     os.makedirs(base_datadir, exist_ok=True)
 
